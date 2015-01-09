@@ -55,6 +55,8 @@ public class ClientSmallScanner extends ClientScanner {
   // When fetching results from server, skip the first result if it has the same
   // row with this one
   private byte[] skipRowOfFirstResult = null;
+  private boolean alreadyGetRowOfFirstResult = false;
+  private int nextRowOffsetPerColumnFamily = 0;
 
   /**
    * Create a new ClientSmallScanner for the specified table. An HConnection
@@ -142,10 +144,19 @@ public class ClientSmallScanner extends ClientScanner {
         LOG.debug("Finished with region " + this.currentRegion);
       }
     } else if (this.lastResult != null) {
+      if (alreadyGetRowOfFirstResult) {
+        nextRowOffsetPerColumnFamily += (this.scan.getBatch() * this.caching);
+      } else {
+        nextRowOffsetPerColumnFamily = (this.scan.getBatch() * (this.caching - 1));
+      }
+      this.scan.setRowOffsetPerColumnFamily(nextRowOffsetPerColumnFamily);
+      alreadyGetRowOfFirstResult = true;
       localStartKey = this.lastResult.getRow();
       skipRowOfFirstResult = this.lastResult.getRow();
       cacheNum++;
     } else {
+      alreadyGetRowOfFirstResult = false;
+      nextRowOffsetPerColumnFamily = 0;
       localStartKey = this.scan.getStartRow();
     }
 
